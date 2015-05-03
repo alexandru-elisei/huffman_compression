@@ -15,12 +15,6 @@
 		}						\
 	} while (0)		
 
-struct __attribute__((__packed__)) huf_node {
-	unsigned char value;
-	int16_t left;
-	int16_t right;
-};
-
 struct __attribute__((aligned)) input_char {
 	unsigned char val;
 	unsigned int freq;		/* number of apparitions */
@@ -31,7 +25,7 @@ enum huf_result get_input(FILE *in, struct input_char **chars, int *n,
 
 int main(int argc, char **argv)
 {
-	struct input_char *chars; 	/* holds the original chars read */
+	struct input_char *read_chars; 	/* holds the original characters */
 	enum huf_result r;
 	int distinct_chars;		/* how many distinct chars there are */
 	int total_chars;		/* the total number of chars */
@@ -57,7 +51,7 @@ int main(int argc, char **argv)
 	if (out == NULL)
 		CHECK_RESULT(HUF_ERROR_FILE_ACCESS);
 
-	r = get_input(in, &chars, &total_chars, &distinct_chars);
+	r = get_input(in, &read_chars, &total_chars, &distinct_chars);
 	CHECK_RESULT(r);
 
 	return EXIT_SUCCESS;

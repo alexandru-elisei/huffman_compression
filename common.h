@@ -39,6 +39,12 @@ enum huf_result {
 	HUF_ERROR_UNKNOWN_ERROR		= 99,	
 };
 
+struct __attribute__((__packed__)) huf_node {
+	unsigned char value;
+	int16_t left;
+	int16_t right;
+};
+
 void huf_print_result(enum huf_result msg);
 
 #endif	/* #ifndef COMMON_H */
