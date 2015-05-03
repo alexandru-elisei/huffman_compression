@@ -23,7 +23,7 @@ struct __attribute__((__packed__)) huf_node {
 
 struct __attribute__((aligned)) input_char {
 	unsigned char val;
-	unsigned int freq;	/* number of apparitions */
+	unsigned int freq;		/* number of apparitions */
 };
 
 enum huf_result get_input(FILE *in, struct input_char **chars, int *n,
@@ -31,10 +31,10 @@ enum huf_result get_input(FILE *in, struct input_char **chars, int *n,
 
 int main(int argc, char **argv)
 {
-	struct input_char *chars;
+	struct input_char *chars; 	/* holds the original chars read */
 	enum huf_result r;
-	int separate_chars;
-	int total_chars;
+	int distinct_chars;		/* how many distinct chars there are */
+	int total_chars;		/* the total number of chars */
 
 	FILE *in = NULL, *out = NULL;
 	char option;
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	if (out == NULL)
 		CHECK_RESULT(HUF_ERROR_FILE_ACCESS);
 
-	r = get_input(in, &chars, &total_chars, &separate_chars);
+	r = get_input(in, &chars, &total_chars, &distinct_chars);
 	CHECK_RESULT(r);
 
 	return EXIT_SUCCESS;
@@ -67,9 +67,14 @@ enum huf_result get_input(FILE *in, struct input_char **chars, int *n,
 		int *separate)
 {
 	uint32_t v[ASCII_SIZE] = {0};
-	int16_t c;		/* EOF is -1, int16_t is from -256 to 255 */
+	/* EOF is -1, int16_t is from -256 to 255 */
+	int16_t c;		
 	int i, j;
 
+	/* 
+	 * An index in the array v represents the character code. The value
+	 * is the number of apparitions.
+	 */
 	*n = 0;
 	*separate = 0;
 	while ((c = fgetc(in)) != EOF) {
@@ -84,6 +89,7 @@ enum huf_result get_input(FILE *in, struct input_char **chars, int *n,
 	if (*chars == NULL)
 		return HUF_ERROR_MEMORY_ALLOC;
 
+	/* Creating the array of input_char structures */
 	i = 0;
 	for (j = 0; j < ASCII_SIZE; j++)
 		if (v[j] > 0) {
