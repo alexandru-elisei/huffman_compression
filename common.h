@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ASCII_SIZE	(256)
+
 /* Defined when compiling */
 #ifdef DEBUG
 
