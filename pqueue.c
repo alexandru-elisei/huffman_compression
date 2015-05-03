@@ -12,11 +12,11 @@ static struct heap {
 	 */
 	struct heap_huf_node *huf_nodes;
 	int size;
-	int mem_alloc;
+	int max_size;
 };
 
 /* Inserts a new element into the heap */
-static enum huf_result insert(struct tmp_huf_node *c);
+static enum huf_result insert(struct tmp_huf_node *c, int index);
 
 /* Rearranges the heap from the bottom up so the heap conditions are met */
 static enum huf_result rearrange_from_tail();
@@ -53,14 +53,14 @@ enum huf_result pqueue_init(struct pqueue **pq, int n)
 		return HUF_ERROR_MEMORY_ALLOC;
 
 	/* Allocating memory for the heap elements */
-	h->mem_alloc = n;
+	h->max_size = n;
 	h->huf_nodes = (struct tmp_huf_node **) malloc(
-			h->mem_alloc * sizeof(struct tmp_huf_node *));
+			h->max_size * sizeof(struct tmp_huf_node *));
 
 	if (h->huf_nodes == NULL)
 		return HUF_ERROR_MEMORY_ALLOC;
 
-	for (i = 0; i < h->mem_alloc; i++) {
+	for (i = 0; i < h->max_size; i++) {
 		h->huf_nodes[i] = (struct tmp_huf_node *) malloc(
 				sizeof(struct tmp_huf_node));
 		if (h->huf_nodes[i] == NULL)
@@ -84,24 +84,25 @@ static enum huf_result print()
 
 	printf("\n");
 	for (i = 0; i < h->size; i++)
-		printf("%d: char = [%c], freq = %d, left = %d, right = %d\n",
-				i, h->huf_nodes[i]->val,
-				h->huf_nodes[i]->freq,
-				h->huf_nodes[i]->left,
-				h->huf_nodes[i]->right);
+		printf("%d: char = [%c], index = %d, freq = %d, left = %d, right = %d\n",
+				i, h->huf_nodes[i].node->val,
+				h->huf_nodes[i].index,
+				h->huf_nodes[i].node->freq,
+				h->huf_nodes[i].node->left,
+				h->huf_nodes[i].node->right);
 	printf("\n");
 
 	return HUF_SUCCESS;
 }
 
-static enum huf_result insert(struct tmp_huf_node *c)
+static enum huf_result insert(struct tmp_huf_node *c, int index)
 {
 	enum huf_result r;
 
 	if (h == NULL)
 		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
 
-	if (h->size == h->mem_alloc)
+	if (h->size == h->max_size)
 		return HUF_ERROR_QUEUE_SIZE_EXCEEDED;
 
 	h->huf_nodes[(h->size)++] = c;

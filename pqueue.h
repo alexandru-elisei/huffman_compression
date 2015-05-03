@@ -8,7 +8,7 @@
 #include "common.h"
 
 struct pqueue {
-	enum huf_result (*insert) (struct tmp_huf_node *c);
+	enum huf_result (*insert) (struct tmp_huf_node *c, int index);
 	enum huf_result (*print) ();
 	enum huf_result (*create_tmp_huf) (tmp_huf_node *tmp_huftree,
 			uint32_t tmp_huftree_size,
