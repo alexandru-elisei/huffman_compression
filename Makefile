@@ -2,16 +2,26 @@
 # Structuri de Date
 # Tema 2
 
-# Number of cores to be used by make; number of physical cores + 1
-CC = "gcc'
-MAKEOPTS = "-j9"
+CC = "gcc"
 override CFLAGS += "-Wall"
 PROG = "huffman"
 
-# HEADERS = 
+HEADERS = common.h
 
-SOURCES = main.c
+SOURCES = main.c			\
+	  $(HEADERS:%.h=%.c)
+
 OBJS = $(SOURCES:%.c=%.o)
 
 .PHONY: build
-#build: $(PROG)
+build: $(PROG)
+
+$(PROG): $(OBJS) $(HEADERS)
+	$(CC) $(OBJS) -o $(PROG) $(CFLAGS)
+	
+%.o: %.c
+	$(CC) -c $^ -o $@ $(CFLAGS)
+
+.PHONY: clean
+clean:
+	rm -rf a.out $(PROG) $(OBJS)

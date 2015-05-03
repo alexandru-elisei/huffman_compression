@@ -37,4 +37,6 @@ enum huf_result {
 	HUF_ERROR_UNKNOWN_ERROR		= 99,	
 };
 
+void huf_print_result(enum huf_result msg);
+
 #endif	/* #ifndef COMMON_H */

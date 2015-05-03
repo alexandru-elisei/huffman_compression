@@ -1,5 +1,6 @@
 *.pdf
-*.out
 test*
-*.in
-*.out
+*in
+*out
+*.o
+huffman
