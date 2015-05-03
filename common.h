@@ -9,6 +9,7 @@
 #include <stdlib.h>
 
 #define ASCII_SIZE	(256)
+#define NO_CHILD	(-1)
 
 /* Defined when compiling */
 #ifdef DEBUG
@@ -35,12 +36,23 @@ enum huf_result {
 	HUF_ERROR_INVALID_ARGUMENTS	= 5,	
 	HUF_ERROR_FILE_ACCESS		= 6,	/* Cannot open file */
 	HUF_ERROR_END_OF_FILE		= 7,	/* Unexpected end of file */
-	HUF_ERROR_UNKNOWN_OPTION	= 8,	
+	HUF_ERROR_QUEUE_NOT_INITIALIZED	= 8,
+	HUF_ERROR_QUEUE_SIZE_EXCEEDED	= 9,
+	HUF_ERROR_UNKNOWN_OPTION	= 10,	
 	HUF_ERROR_UNKNOWN_ERROR		= 99,	
 };
 
+/* Huffman tree node to be used for compression */
 struct __attribute__((__packed__)) huf_node {
-	unsigned char value;
+	unsigned char val;
+	int16_t left;
+	int16_t right;
+};
+
+/* Temporary Huffman node necessary for building the tree in memory */
+struct __attribute__((aligned)) tmp_huf_node {
+	unsigned int freq;			/* number of apparitions */
+	unsigned char val;
 	int16_t left;
 	int16_t right;
 };

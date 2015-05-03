@@ -6,7 +6,8 @@ CC = "gcc"
 override CFLAGS += "-Wall"
 PROG = "huffman"
 
-HEADERS = common.h
+HEADERS = pqueue.h			\
+	  common.h
 
 SOURCES = main.c			\
 	  $(HEADERS:%.h=%.c)

@@ -20,6 +20,10 @@ void huf_print_result(enum huf_result msg)
 		PRINTERR("Cannot access file.\n");
 	else if (msg == HUF_ERROR_END_OF_FILE)
 		PRINTERR("Unexpected end of file.\n");
+	else if (msg == HUF_ERROR_QUEUE_NOT_INITIALIZED)
+		PRINTERR("Queue not initialized.\n");
+	else if (msg == HUF_ERROR_QUEUE_SIZE_EXCEEDED)
+		PRINTERR("Queue size exceeded.\n");
 	else if (msg == HUF_ERROR_UNKNOWN_OPTION)
 		PRINTERR("Unknown option.\n");
 	else if (msg == HUF_ERROR_UNKNOWN_ERROR)
