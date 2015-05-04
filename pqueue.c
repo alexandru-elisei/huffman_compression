@@ -22,10 +22,10 @@ static struct heap {
 static enum huf_result insert(struct tmp_huf_node *c, uint16_t index);
 
 /* Rearranges the heap from the bottom up so the heap conditions are met */
-static enum huf_result rearrange_from_tail();
+static enum huf_result rearrange_bottom_up();
 
 /* Rearranges the heap from the top down so the heap conditions are met */
-static enum huf_result rearrange_from_head();
+static enum huf_result rearrange_top_down(uint16_t root);
 
 /* Prints the heap */
 static enum huf_result print();
@@ -116,7 +116,7 @@ static enum huf_result insert(struct tmp_huf_node *c, uint16_t index)
 	h->huf_nodes[pos].index = index;
 	(h->size)++;
 
-	r = rearrange_from_tail();
+	r = rearrange_bottom_up();
 
 	return r;
 }
@@ -168,9 +168,10 @@ static struct tmp_huf_node *create_parent()
 
 	left_child = h->huf_nodes[0];
 	right_child = h->huf_nodes[1];
-	h->huf_nodes[0] = h->huf_nodes[h->size - 1];
+
+	h->huf_nodes[1] = h->huf_nodes[h->size - 1];
 	(h->size)--;
-	rearrange_from_head();
+	rearrange_top_down(1);
 	/*
 	printf("after first element removed\n");
 	print();
@@ -178,7 +179,7 @@ static struct tmp_huf_node *create_parent()
 
 	h->huf_nodes[0] = h->huf_nodes[h->size - 1];
 	(h->size)--;
-	rearrange_from_head();
+	rearrange_top_down(0);
 	/*
 	printf("after second element removed\n");
 	print();
@@ -194,7 +195,7 @@ static struct tmp_huf_node *create_parent()
 }
 
 /* Rearranges the heap from the bottom up so the heap conditions are met */
-static enum huf_result rearrange_from_tail()
+static enum huf_result rearrange_bottom_up()
 {
 	struct heap_huf_node tmp;
 	int index, parent;
@@ -221,7 +222,7 @@ static enum huf_result rearrange_from_tail()
 }
 
 /* Rearranges the heap from the top down so the heap conditions are met */
-static enum huf_result rearrange_from_head()
+static enum huf_result rearrange_top_down(uint16_t root)
 {
 	struct heap_huf_node tmp;
 	int index, left_child, right_child;
@@ -235,8 +236,8 @@ static enum huf_result rearrange_from_head()
 		return HUF_SUCCESS;
 
 	/* Moving the root downwards */
-	tmp = h->huf_nodes[0];
-	index = 0;
+	tmp = h->huf_nodes[root];
+	index = root;
 	last_index = h->size - 1;
 	/* While we have a left child */
 	while (2 * index < last_index) {
@@ -256,8 +257,6 @@ static enum huf_result rearrange_from_head()
 
 		/* Root is smaller than both children */
 		if (h->huf_nodes[min].node->freq >= tmp.node->freq) {
-			h->huf_nodes[index] = h->huf_nodes[min];
-			index = min;
 			break;
 		} else {
 			h->huf_nodes[index] = h->huf_nodes[min];

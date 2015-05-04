@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 		r = pq->insert(&tmp_huftree[i], i);
 		CHECK_RESULT(r);
 	}
+	printf("after inserting original tmp_huftree array:\n");
 	r = pq->print();
 	CHECK_RESULT(r);
 
