@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #define ASCII_SIZE	(256)
 #define NO_CHILD	(-1)

@@ -1,4 +1,3 @@
-#include <stdint.h>
 #include <string.h>
 
 #include "common.h"
@@ -19,6 +18,8 @@
 enum huf_result get_input(FILE *in, struct tmp_huf_node **th, 
 		uint32_t *total, uint32_t *mem);
 
+void print_tmp_huftree(struct tmp_huf_node *huf, uint16_t size);
+
 int main(int argc, char **argv)
 {
 	/*
@@ -34,7 +35,7 @@ int main(int argc, char **argv)
 
 	char option;
 	uint32_t total_chars;		/* the total number of chars */
-	uint32_t tmp_huftree_size;	/* temporary Huffman tree array size */
+	uint16_t tmp_huftree_size;	/* temporary Huffman tree array size */
 	int i;
 
 	/* Currently allocated memory for Huffman array */
@@ -71,11 +72,18 @@ int main(int argc, char **argv)
 	 * skipping the empty root at position 0
 	 */
 	for (i = 1; i < tmp_huftree_size; i++) {
-		r = pq->insert(&tmp_huftree[i]);
+		r = pq->insert(&tmp_huftree[i], i);
 		CHECK_RESULT(r);
 	}
 	r = pq->print();
 	CHECK_RESULT(r);
+
+	print_tmp_huftree(tmp_huftree, tmp_huftree_size);
+	r = pq->create_tmp_huf(&tmp_huftree, &tmp_huftree_size,
+		       	&tmp_huftree_mem);
+	CHECK_RESULT(r);
+
+	print_tmp_huftree(tmp_huftree, tmp_huftree_size);
 
 	return EXIT_SUCCESS;
 }
@@ -125,8 +133,19 @@ enum huf_result get_input(FILE *in, struct tmp_huf_node **th,
 			i++;
 		}
 
-	for (i = 0; i < *mem; i++)
-		printf("%d: [%c] - %d\n", i, (*th)[i].val, (*th)[i].freq);
+	print_tmp_huftree(*th, *mem);
 
 	return HUF_SUCCESS;
+}
+
+void print_tmp_huftree(struct tmp_huf_node *th, uint16_t size)
+{
+	int i;
+
+	printf("\n\t\ttmp_huftree:\n\n");
+	for (i = 0; i < size; i++)
+		printf("%d: [%c] \t- freq = %3d, left = %3d, right = %3d\n", i,
+			       	th[i].val, th[i].freq,
+				th[i].left, th[i].right);
+	printf("\n");
 }

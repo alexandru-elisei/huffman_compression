@@ -1,8 +1,8 @@
 #include "pqueue.h"
 
 static struct heap_huf_node {
-	uint32_t index;
-	tmp_huf_node *node;
+	uint16_t index;
+	struct tmp_huf_node *node;
 };
 
 static struct heap {
@@ -11,12 +11,12 @@ static struct heap {
 	 * memory as an array
 	 */
 	struct heap_huf_node *huf_nodes;
-	int size;
-	int max_size;
+	uint16_t size;
+	uint16_t max_size;
 };
 
 /* Inserts a new element into the heap */
-static enum huf_result insert(struct tmp_huf_node *c, int index);
+static enum huf_result insert(struct tmp_huf_node *c, uint16_t index);
 
 /* Rearranges the heap from the bottom up so the heap conditions are met */
 static enum huf_result rearrange_from_tail();
@@ -28,21 +28,31 @@ static enum huf_result rearrange_from_head();
 static enum huf_result print();
 
 /* Creates the temporary Huffman tree in memory from the heap */
-static enum huf_result create_tmp_huf (tmp_huf_node *tmp_huftree,
-		uint32_t tmp_huftree_size,
-		uint32_t tmp_huftree_mem);
+static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
+		uint16_t *tmp_huftree_size,
+		uint32_t *tmp_huftree_mem);
 
-/* Returns the parent of element at position index */
-static inline int get_parent(int index);
- 
+/* Creates a new tmp_huf_node as the parent of the two children */
+static struct tmp_huf_node *create_parent();
+
 /* The priority queue is stored internally as a heap */
 static struct heap *h = NULL;	
 
-/* Assigns struct functions and initializes internal variables */
-enum huf_result pqueue_init(struct pqueue **pq, int n)
+/* Returns the parent of element at position index */
+static inline int get_parent(int index)
 {
-	int i;
+	if (index == 1 || index == 0)
+		return 0;
 
+	if (index % 2 == 0)
+		return index / 2 - 1; 
+	else
+		return index / 2;
+}
+
+/* Assigns struct functions and initializes internal variables */
+enum huf_result pqueue_init(struct pqueue **pq, uint16_t n)
+{
 	*pq = (struct pqueue *) malloc(sizeof(struct pqueue));
 	(*pq)->insert = insert;
 	(*pq)->print = print;
@@ -54,18 +64,10 @@ enum huf_result pqueue_init(struct pqueue **pq, int n)
 
 	/* Allocating memory for the heap elements */
 	h->max_size = n;
-	h->huf_nodes = (struct tmp_huf_node **) malloc(
-			h->max_size * sizeof(struct tmp_huf_node *));
-
+	h->huf_nodes = (struct heap_huf_node *) malloc(
+			h->max_size * sizeof(struct heap_huf_node));
 	if (h->huf_nodes == NULL)
 		return HUF_ERROR_MEMORY_ALLOC;
-
-	for (i = 0; i < h->max_size; i++) {
-		h->huf_nodes[i] = (struct tmp_huf_node *) malloc(
-				sizeof(struct tmp_huf_node));
-		if (h->huf_nodes[i] == NULL)
-			return HUF_ERROR_MEMORY_ALLOC;
-	}
 	h->size = 0;	
 
 	return HUF_SUCCESS;
@@ -82,9 +84,9 @@ static enum huf_result print()
 	if (h->size == 0)
 		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
 
-	printf("\n");
+	printf("\n\t\theap:\n\n");
 	for (i = 0; i < h->size; i++)
-		printf("%d: char = [%c], index = %d, freq = %d, left = %d, right = %d\n",
+		printf("%d: char = [%c], index = %3d, freq = %3d, left = %3d, right = %3d\n",
 				i, h->huf_nodes[i].node->val,
 				h->huf_nodes[i].index,
 				h->huf_nodes[i].node->freq,
@@ -95,9 +97,10 @@ static enum huf_result print()
 	return HUF_SUCCESS;
 }
 
-static enum huf_result insert(struct tmp_huf_node *c, int index)
+static enum huf_result insert(struct tmp_huf_node *c, uint16_t index)
 {
 	enum huf_result r;
+	uint16_t pos;
 
 	if (h == NULL)
 		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
@@ -105,19 +108,23 @@ static enum huf_result insert(struct tmp_huf_node *c, int index)
 	if (h->size == h->max_size)
 		return HUF_ERROR_QUEUE_SIZE_EXCEEDED;
 
-	h->huf_nodes[(h->size)++] = c;
+	pos = h->size;
+	h->huf_nodes[pos].node = c;
+	h->huf_nodes[pos].index = index;
+	(h->size)++;
+
 	r = rearrange_from_tail();
 
 	return r;
 }
 
 /* Creates the temporary Huffman tree in memory from the heap */
-static enum huf_result create_tmp_huf (tmp_huf_node *tmp_huftree,
-		uint32_t tmp_huftree_size,
-		uint32_t tmp_huftree_mem)
+static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
+		uint16_t *tmp_huftree_size,
+		uint32_t *tmp_huftree_mem)
 {
-	struct tmp_huf_node *new_node;
-	struct tmp_huf_node *left_child, *right_child;
+	struct tmp_huf_node *new;
+	uint16_t insert_pos;
 
 	if (h == NULL || h->size == 0)
 		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
@@ -125,16 +132,47 @@ static enum huf_result create_tmp_huf (tmp_huf_node *tmp_huftree,
 	if (tmp_huftree == NULL || tmp_huftree_size == 0)
 		return HUF_ERROR_INVALID_ARGUMENTS;
 
+	new = create_parent();
+	/* Reallocating memory for the Huffman tree, if necessary */
+	if (*tmp_huftree_mem == *tmp_huftree_size) {
+		*tmp_huftree_mem *= 2;
+		*tmp_huftree = (struct tmp_huf_node *) realloc(
+			*tmp_huftree, 
+			*tmp_huftree_mem * sizeof(struct tmp_huf_node));
+	}
+	/* 
+	 * Inserting the new Huffman interior node at the end of the Huffman
+	 * tree array
+	 */
+	insert_pos = *tmp_huftree_size;
+	(*tmp_huftree)[insert_pos] = *new;
+	(*tmp_huftree_size)++;
+
+	return HUF_SUCCESS;
+}
+
+/* Creates a new tmp_huf_node as the parent of the two children */
+static struct tmp_huf_node *create_parent()
+{
+	struct tmp_huf_node *new;
+	struct heap_huf_node left_child, right_child;
+
 	left_child = h->huf_nodes[0];
 	right_child = h->huf_nodes[1];
 
-	return HUF_SUCCESS;
+	new = (struct tmp_huf_node *) malloc(sizeof(struct tmp_huf_node));
+	new->val = 0;
+	new->freq = left_child.node->freq + right_child.node->freq;
+	new->left = left_child.index;
+	new->right = right_child.index;
+
+	return new;
 }
 
 /* Rearranges the heap from the bottom up so the heap conditions are met */
 static enum huf_result rearrange_from_tail()
 {
-	struct tmp_huf_node *tmp;
+	struct heap_huf_node tmp;
 	int index, parent;
 
 	if (h == NULL || h->size == 0)
@@ -144,31 +182,16 @@ static enum huf_result rearrange_from_tail()
 		return HUF_SUCCESS;
 
 	index = h->size - 1;
+	parent = get_parent(index);
 	tmp = h->huf_nodes[index];
 
-	while (index > 0) {
+	while (index > 0 && h->huf_nodes[parent].node->freq > tmp.node->freq) {
+		h->huf_nodes[index] = h->huf_nodes[parent];
+		index = parent;
 		parent = get_parent(index);
-		if (h->huf_nodes[parent]->freq < tmp->freq) {
-			break;
-		} else {
-			h->huf_nodes[index] = h->huf_nodes[parent];
-			index = parent;
-		}
 	}
 
 	h->huf_nodes[index] = tmp;
 
 	return HUF_SUCCESS;
-}
-
-/* Returns the parent of element at position index */
-static inline int get_parent(int index)
-{
-	if (index == 1 || index == 0)
-		return 0;
-
-	if (index % 2 == 0)
-		return index / 2 - 1; 
-	else
-		return index / 2;
 }
