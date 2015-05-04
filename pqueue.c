@@ -1,6 +1,6 @@
 #include "pqueue.h"
 
-/* Similar output to strcmp: 0 is equal, < 0 if a smaller, > 0 otherwise */
+/* Similar output to strcmp: 0 is equal, < 0 if a smaller than b, > 0 otherwise */
 #define FREQCMP(a, b)	(h->huf_nodes[(a)].node->freq - h->huf_nodes[(b)].node->freq)
 
 static struct heap_huf_node {
@@ -135,21 +135,27 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 	if (tmp_huftree == NULL || tmp_huftree_size == 0)
 		return HUF_ERROR_INVALID_ARGUMENTS;
 
-	new = create_parent();
-	/* Reallocating memory for the Huffman tree, if necessary */
-	if (*tmp_huftree_mem == *tmp_huftree_size) {
-		*tmp_huftree_mem *= 2;
-		*tmp_huftree = (struct tmp_huf_node *) realloc(
-			*tmp_huftree, 
-			*tmp_huftree_mem * sizeof(struct tmp_huf_node));
+	while (h->size > 1) {
+		new = create_parent();
+		/* Reallocating memory for the Huffman tree, if necessary */
+		if (*tmp_huftree_mem == *tmp_huftree_size) {
+			*tmp_huftree_mem *= 2;
+			*tmp_huftree = (struct tmp_huf_node *) realloc(
+					*tmp_huftree, 
+					*tmp_huftree_mem * sizeof(struct tmp_huf_node));
+		}
+		/* 
+		 * Inserting the new Huffman interior node at the end of the Huffman
+		 * tree array
+		 */
+		insert_pos = *tmp_huftree_size;
+		(*tmp_huftree)[insert_pos] = *new;
+		(*tmp_huftree_size)++;
+
+		insert(&((*tmp_huftree)[insert_pos]), insert_pos);
+		print();
 	}
-	/* 
-	 * Inserting the new Huffman interior node at the end of the Huffman
-	 * tree array
-	 */
-	insert_pos = *tmp_huftree_size;
-	(*tmp_huftree)[insert_pos] = *new;
-	(*tmp_huftree_size)++;
+	print();
 
 	return HUF_SUCCESS;
 }
@@ -162,6 +168,21 @@ static struct tmp_huf_node *create_parent()
 
 	left_child = h->huf_nodes[0];
 	right_child = h->huf_nodes[1];
+	h->huf_nodes[0] = h->huf_nodes[h->size - 1];
+	(h->size)--;
+	rearrange_from_head();
+	/*
+	printf("after first element removed\n");
+	print();
+	*/
+
+	h->huf_nodes[0] = h->huf_nodes[h->size - 1];
+	(h->size)--;
+	rearrange_from_head();
+	/*
+	printf("after second element removed\n");
+	print();
+	*/
 
 	new = (struct tmp_huf_node *) malloc(sizeof(struct tmp_huf_node));
 	new->val = 0;
@@ -203,8 +224,9 @@ static enum huf_result rearrange_from_tail()
 static enum huf_result rearrange_from_head()
 {
 	struct heap_huf_node tmp;
-	int index, left_child, right_child
-	int min, max;
+	int index, left_child, right_child;
+	int last_index;
+	int min;
 
 	if (h == NULL || h->size == 0)
 		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
@@ -215,14 +237,15 @@ static enum huf_result rearrange_from_head()
 	/* Moving the root downwards */
 	tmp = h->huf_nodes[0];
 	index = 0;
+	last_index = h->size - 1;
 	/* While we have a left child */
-	while (2 * index < h->size - 1) {
+	while (2 * index < last_index) {
 		left_child = 2 * index + 1;
 		right_child = 2 * index + 2;
 
 		/* If we have both children we find out which child is smaller */
-		if (right_child <= h->size - 1) {
-			if (FREQCMP(left_child, right_child) < 0)
+		if (right_child <= last_index) {
+			if (h->huf_nodes[left_child].node->freq <= h->huf_nodes[right_child].node->freq)
 				min = left_child;
 			else
 				min = right_child;
@@ -232,7 +255,7 @@ static enum huf_result rearrange_from_head()
 		}
 
 		/* Root is smaller than both children */
-		if (h->huf_nodes[min].node->freq > tmp->freq) {
+		if (h->huf_nodes[min].node->freq >= tmp.node->freq) {
 			h->huf_nodes[index] = h->huf_nodes[min];
 			index = min;
 			break;
