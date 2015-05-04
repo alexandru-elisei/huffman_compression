@@ -1,5 +1,8 @@
 #include "pqueue.h"
 
+/* Similar output to strcmp: 0 is equal, < 0 if a smaller, > 0 otherwise */
+#define FREQCMP(a, b)	(h->huf_nodes[(a)].node->freq - h->huf_nodes[(b)].node->freq)
+
 static struct heap_huf_node {
 	uint16_t index;
 	struct tmp_huf_node *node;
@@ -195,3 +198,51 @@ static enum huf_result rearrange_from_tail()
 
 	return HUF_SUCCESS;
 }
+
+/* Rearranges the heap from the top down so the heap conditions are met */
+static enum huf_result rearrange_from_head()
+{
+	struct heap_huf_node tmp;
+	int index, left_child, right_child
+	int min, max;
+
+	if (h == NULL || h->size == 0)
+		return HUF_ERROR_QUEUE_NOT_INITIALIZED;
+
+	if (h->size == 1)
+		return HUF_SUCCESS;
+
+	/* Moving the root downwards */
+	tmp = h->huf_nodes[0];
+	index = 0;
+	/* While we have a left child */
+	while (2 * index < h->size - 1) {
+		left_child = 2 * index + 1;
+		right_child = 2 * index + 2;
+
+		/* If we have both children we find out which child is smaller */
+		if (right_child <= h->size - 1) {
+			if (FREQCMP(left_child, right_child) < 0)
+				min = left_child;
+			else
+				min = right_child;
+		/* We only have a left child */
+		} else {
+			min = left_child;
+		}
+
+		/* Root is smaller than both children */
+		if (h->huf_nodes[min].node->freq > tmp->freq) {
+			h->huf_nodes[index] = h->huf_nodes[min];
+			index = min;
+			break;
+		} else {
+			h->huf_nodes[index] = h->huf_nodes[min];
+			index = min;
+		}
+	}
+	h->huf_nodes[index] = tmp;
+
+	return HUF_SUCCESS;
+}
+		
