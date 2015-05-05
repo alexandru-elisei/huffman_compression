@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 	 * Linking the original array of chars to the priority queue, and
 	 * skipping the empty root at position 0
 	 */
-	for (i = 1; i < tmp_huftree_size; i++) {
+	for (i = 0; i < tmp_huftree_size; i++) {
 		r = pq->insert(&tmp_huftree[i], i);
 		CHECK_RESULT(r);
 	}
@@ -105,24 +105,16 @@ enum huf_result get_input(FILE *in, struct tmp_huf_node **th,
 		(*total)++;
 	}
 
-	/* At position zero we have the root of the Huffman tree */
-	(*mem)++;
 	*th = (struct tmp_huf_node *) malloc(
 			(*mem) * sizeof(struct tmp_huf_node));
 	if (*th == NULL)
 		return HUF_ERROR_MEMORY_ALLOC;
 
-	/* Creating empty root at position 0 */
-	(*th)[0].freq = 0;
-	(*th)[0].val = '\0';
-	(*th)[0].left = NO_CHILD;
-	(*th)[0].right = NO_CHILD;
-
 	/*
 	 * Creating the Huffman array by adding all the read chars starting
 	 * at index 1, after the root
 	 */
-	i = 1;
+	i = 0;
 	for (j = 0; j < ASCII_SIZE; j++)
 		if (v[j] > 0) {
 			(*th)[i].freq = v[j];

@@ -1,8 +1,5 @@
 #include "pqueue.h"
 
-/* Similar output to strcmp: 0 is equal, < 0 if a smaller than b, > 0 otherwise */
-#define FREQCMP(a, b)	(h->huf_nodes[(a)].node->freq - h->huf_nodes[(b)].node->freq)
-
 static struct heap_huf_node {
 	uint16_t index;			/* index in the tmp_huftree */
 	unsigned int freq;
@@ -51,6 +48,13 @@ static inline int get_parent(int index)
 		return index / 2 - 1; 
 	else
 		return index / 2;
+}
+
+static inline void delete_node(uint16_t node)
+{
+	h->huf_nodes[node] = h->huf_nodes[h->size - 1];
+	h->size--;
+	sift_down(node);
 }
 
 /* Assigns struct functions and initializes internal variables */
@@ -133,27 +137,7 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		return HUF_ERROR_INVALID_ARGUMENTS;
 
 	while (h->size > 1) {
-		/*
-		printf("create_tmp_huf, before creating parent:\n");
-		print();
-		printf("in create_tmp_huf(), heap[4]:\n");
-		printf("val = [%c], freq = %d, index = %d\n", 
-				h->huf_nodes[4].node->val,
-				h->huf_nodes[4].node->freq,
-				h->huf_nodes[4].index);
-		*/
-		/* Reallocating memory for the Huffman tree, if necessary */
 		new = create_parent();
-		/*
-		printf("create_tmp_huf, after creating parent:\n");
-		print();
-
-		printf("in create_tmp_huf(), heap[4]:\n");
-		printf("val = [%c], freq = %d, index = %d\n", 
-				h->huf_nodes[4].node->val,
-				h->huf_nodes[4].node->freq,
-				h->huf_nodes[4].index);
-		*/
 		/* Reallocating memory for the Huffman tree, if necessary */
 		if (*tmp_huftree_mem == *tmp_huftree_size) {
 			*tmp_huftree_mem = *tmp_huftree_mem * 2;
@@ -161,6 +145,7 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 					*tmp_huftree, 
 					*tmp_huftree_mem * sizeof(struct tmp_huf_node));
 		}
+
 		/* 
 		 * Inserting the new Huffman interior node at the end of the Huffman
 		 * tree array
@@ -169,18 +154,7 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		(*tmp_huftree)[insert_pos] = *new;
 		(*tmp_huftree_size)++;
 
-		/*
-		printf("tmp_huftree, after new element inserted:\n");
-		print_tmp_huftree(*tmp_huftree, *tmp_huftree_size);
-
-		printf("create_tmp_huf, before inserting:\n");
-		print();
-		*/
 		insert(&((*tmp_huftree)[insert_pos]), insert_pos);
-		/*
-		printf("create_tmp_huf, after inserting:\n");
-		print();
-		*/
 	}
 
 	return HUF_SUCCESS;
@@ -195,32 +169,13 @@ static struct tmp_huf_node *create_parent()
 	left_child = h->huf_nodes[0];
 	right_child = h->huf_nodes[1];
 
-		printf("in create_parent(), BEFORE sift_down(1), heap[4]:\n");
-		printf("freq = %d, index = %d\n", 
-				h->huf_nodes[4].freq,
-				h->huf_nodes[4].index);
+	delete_node(1);
+	delete_node(0);
 
-	h->huf_nodes[1] = h->huf_nodes[h->size - 1];
-	h->size--;
-	sift_down(1);
-
-		printf("in sift_down(), AFTER sift_down(1), heap[4]:\n");
-		printf("freq = %d, index = %d\n", 
-				h->huf_nodes[4].freq,
-				h->huf_nodes[4].index);
-	/*
-	printf("after first element removed\n");
-	print();
-	*/
-
-	h->huf_nodes[0] = h->huf_nodes[h->size - 1];
-	h->size--;
-	sift_down(0);
-	/*
-	printf("after second element removed\n");
-	print();
-	*/
-
+	/* 
+	 * Creating new tmp_huftree node as the sum of the occurences of the two
+	 * children nodes
+	 */
 	new = (struct tmp_huf_node *) malloc(sizeof(struct tmp_huf_node));
 	new->val = 0;
 	new->freq = left_child.freq + right_child.freq;
@@ -246,10 +201,6 @@ static enum huf_result sift_up()
 	parent = get_parent(index);
 	tmp = h->huf_nodes[index];
 
-	printf("sift_up(), index = %d\n", index);
-	printf("sift_up(), freq[index] = %d\n", h->huf_nodes[index].freq);
-	printf("sift_up(), parent = %d\n", parent);
-	printf("sift_up(), freq[parent] = %d\n", h->huf_nodes[parent].freq);
 	/* Moving the last element up the heap until heap conditions are met */
 	while (index > 0 && h->huf_nodes[parent].freq > tmp.freq) {
 		h->huf_nodes[index] = h->huf_nodes[parent];
@@ -281,15 +232,11 @@ static enum huf_result sift_down(uint16_t root)
 	tmp = h->huf_nodes[root];
 	index = root;
 	last_index = h->size - 1;
-	printf("\n\nsift_down, with root %d, heap before is:\n", root);
-	print();
 	/* While we have a left child */
 	while (2 * index < last_index) {
 		left_child = 2 * index + 1;
 		right_child = 2 * index + 2;
-		DEBINFO(index);
-		DEBINFO(left_child);
-		DEBINFO(right_child);
+
 		/* If we have both children we find out which child is smaller */
 		if (right_child <= last_index) {
 			if (h->huf_nodes[left_child].freq <= h->huf_nodes[right_child].freq)
@@ -301,8 +248,6 @@ static enum huf_result sift_down(uint16_t root)
 			min = left_child;
 		}
 
-		DEBINFO(min);
-		DEBINFO(h->huf_nodes[min].freq);
 		/* Root is smaller than both children */
 		if (h->huf_nodes[min].freq >= tmp.freq) {
 			break;
@@ -313,8 +258,6 @@ static enum huf_result sift_down(uint16_t root)
 	}
 	h->huf_nodes[index].index = tmp.index;
 	h->huf_nodes[index].freq = tmp.freq;
-	printf("\n\nsift_down, with root %d, heap after is:\n", root);
-	print();
 
 	return HUF_SUCCESS;
 }
