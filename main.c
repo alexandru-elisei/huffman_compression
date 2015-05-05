@@ -18,8 +18,6 @@
 enum huf_result get_input(FILE *in, struct tmp_huf_node **th, 
 		uint32_t *total, uint32_t *mem);
 
-void print_tmp_huftree(struct tmp_huf_node *huf, uint16_t size);
-
 int main(int argc, char **argv)
 {
 	/*
@@ -139,14 +137,3 @@ enum huf_result get_input(FILE *in, struct tmp_huf_node **th,
 	return HUF_SUCCESS;
 }
 
-void print_tmp_huftree(struct tmp_huf_node *th, uint16_t size)
-{
-	int i;
-
-	printf("\n\t\ttmp_huftree:\n\n");
-	for (i = 0; i < size; i++)
-		printf("%d: [%c] \t- freq = %3d, left = %3d, right = %3d\n", i,
-			       	th[i].val, th[i].freq,
-				th[i].left, th[i].right);
-	printf("\n");
-}
