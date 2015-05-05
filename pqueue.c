@@ -261,7 +261,9 @@ static enum huf_result sift_up()
 		index = parent;
 		parent = get_parent(index);
 	}
-	h->huf_nodes[index] = tmp;
+
+	h->huf_nodes[index].index = tmp.index;
+	h->huf_nodes[index].node = tmp.node;
 
 	return HUF_SUCCESS;
 }
@@ -314,7 +316,8 @@ static enum huf_result sift_down(uint16_t root)
 			index = min;
 		}
 	}
-	h->huf_nodes[index] = tmp;
+	h->huf_nodes[index].index = tmp.index;
+	h->huf_nodes[index].node = tmp.node;
 	printf("\n\nsift_down, with root %d, heap after is:\n", root);
 	print();
 
