@@ -80,6 +80,18 @@ enum huf_result pqueue_init(struct pqueue **pq, uint16_t n)
 	return HUF_SUCCESS;
 }
 
+/* Removes struct functions and frees memory */
+enum huf_result pqueue_destroy(struct pqueue **pq)
+{
+	free(h->huf_nodes);
+	free(h);
+	h = NULL;
+	free(*pq);
+	*pq = NULL;
+
+	return HUF_SUCCESS;
+}
+
 /* Prints the heap */
 static enum huf_result print()
 {
@@ -158,6 +170,8 @@ static enum huf_result gen_tmp_huf (struct tmp_huf_node **tmp_huftree,
 			(*tmp_huftree_size)++;
 			insert(&((*tmp_huftree)[insert_pos]), insert_pos);
 		}
+
+		free(new);
 	}
 
 	return HUF_SUCCESS;
