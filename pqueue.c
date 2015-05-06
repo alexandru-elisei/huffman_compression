@@ -33,7 +33,7 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		uint32_t *tmp_huftree_mem);
 
 /* Creates a new tmp_huf_node as the parent of the two children */
-static struct tmp_huf_node *create_parent();
+static struct tmp_huf_node *merge_into_one();
 
 /* The priority queue is stored internally as a heap */
 static struct heap *h = NULL;	
@@ -137,7 +137,7 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		return HUF_ERROR_INVALID_ARGUMENTS;
 
 	while (h->size > 1) {
-		new = create_parent();
+		new = merge_into_one();
 		/* Reallocating memory for the Huffman tree, if necessary */
 		if (*tmp_huftree_mem == *tmp_huftree_size) {
 			*tmp_huftree_mem = *tmp_huftree_mem * 2;
@@ -161,15 +161,14 @@ static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
 }
 
 /* Creates a new tmp_huf_node as the parent of the two children */
-static struct tmp_huf_node *create_parent()
+static struct tmp_huf_node *merge_into_one()
 {
 	struct tmp_huf_node *new;
 	struct heap_huf_node left_child, right_child;
 
 	left_child = h->huf_nodes[0];
-	right_child = h->huf_nodes[1];
-
-	delete_node(1);
+	delete_node(0);
+	right_child = h->huf_nodes[0];
 	delete_node(0);
 
 	/* 
@@ -181,6 +180,7 @@ static struct tmp_huf_node *create_parent()
 	new->freq = left_child.freq + right_child.freq;
 	new->left = left_child.index;
 	new->right = right_child.index;
+	new->visited = NOT_VISITED;
 
 	return new;
 }

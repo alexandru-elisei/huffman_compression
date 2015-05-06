@@ -39,9 +39,10 @@ enum huf_result print_tmp_huftree(struct tmp_huf_node *th, uint16_t size)
 
 	printf("\n\t\ttmp_huftree:\n\n");
 	for (i = 0; i < size; i++)
-		printf("%d: [%c] \t- freq = %3d, left = %3d, right = %3d\n", i,
+		printf("%d: [%c] \t- freq = %3d, left = %3d, right = %3d, visited = %d\n", i,
 			       	th[i].val, th[i].freq,
-				th[i].left, th[i].right);
+				th[i].left, th[i].right,
+				th[i].visited);
 	printf("\n");
 
 	return HUF_SUCCESS;

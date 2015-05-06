@@ -9,8 +9,21 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define ASCII_SIZE	(256)
-#define NO_CHILD	(-1)
+#define ASCII_SIZE		(256)
+#define NO_CHILD		(-1)
+#define TEXT_SIZE		(100)
+#define NOT_VISITED		(0)
+#define IS_VISITED		(1)
+#define LEFT_CHILD_CODE		('0')
+#define RIGHT_CHILD_CODE	('1')
+#define WRITE_SIZE		(8)		/* bits to write at a time */
+/* 
+ * Maximum huftree size 2^16 - 1, max level = log2(2^16 - 1 + 1) = 16.
+ * We start creating the code at level 1, so we only need 15 digits. But we
+ * also need the null terminating character for the code string, therefore the
+ * code is 16 characters in size.
+ */
+#define CODE_SIZE	(16)
 
 /* Defined when compiling */
 #ifdef DEBUG
@@ -54,6 +67,7 @@ struct __attribute__((__packed__)) huf_node {
 struct __attribute__((aligned)) tmp_huf_node {
 	unsigned int freq;			/* number of apparitions */
 	unsigned char val;
+	uint8_t visited;
 	int16_t left;
 	int16_t right;
 };
