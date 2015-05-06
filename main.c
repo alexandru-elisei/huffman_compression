@@ -20,8 +20,17 @@ enum huf_result get_input(FILE *in, struct tmp_huf_node **th,
 		char **text, uint32_t *textmem);
 
 void gen_char_codes(struct tmp_huf_node *tmp_huftree, 
-		uint16_t tmp_huftree_size, 
+		uint16_t huftree_size, 
 		char char_codes[ASCII_SIZE][CODE_SIZE]);
+
+/* Generates the Huffman tree to be written to file */
+enum huf_result gen_huf(struct huf_node *huftree, 
+		struct tmp_huf_node *tmp_huftree, 
+		uint16_t huftree_size);
+
+/* Writes the Huffman tree to file */
+void write_huf(FILE *out, uint32_t total_chars, uint16_t huftree_size,
+		struct huf_node *huftree);
 
 void print_char_codes(char char_codes[ASCII_SIZE][CODE_SIZE]);
 
@@ -36,6 +45,7 @@ int main(int argc, char **argv)
 	 * the file and towards the tail all the other interior nodes
 	 */
 	struct tmp_huf_node *tmp_huftree;
+	struct huf_node *huftree;
 	struct pqueue *pq;
 	enum huf_result r;
 
@@ -46,13 +56,9 @@ int main(int argc, char **argv)
 	char char_codes[ASCII_SIZE][CODE_SIZE] = {{0}};
 	uint32_t origtext_mem;		/* allocated memory for the text */
 	uint32_t total_chars;		/* the total number of chars */
-	uint16_t tmp_huftree_size;	/* temporary Huffman tree array size */
+	uint16_t huftree_size;	/* temporary Huffman tree array size */
+	uint32_t tmp_huftree_mem;	/* allocated memory for tmp_huftree */		
 	int i;
-
-	/* Currently allocated memory for Huffman array */
-	uint32_t tmp_huftree_mem;		
-
-	print_char_codes(char_codes);
 
 	if (argc < 4)
 		CHECK_RESULT(HUF_ERROR_INVALID_ARGUMENTS);
@@ -80,37 +86,53 @@ int main(int argc, char **argv)
 	r = get_input(in, &tmp_huftree, &total_chars, 
 			&tmp_huftree_mem, 
 			&origtext, &origtext_mem);
-	tmp_huftree_size = tmp_huftree_mem;
+	huftree_size = tmp_huftree_mem;
 	CHECK_RESULT(r);
 
 	/* The priority queue size is equal to all the distinct read chars */
-	r = pqueue_init(&pq, tmp_huftree_size);
+	r = pqueue_init(&pq, huftree_size);
 	CHECK_RESULT(r);
 
 	/* 
 	 * Linking the original array of chars to the priority queue, and
 	 * skipping the empty root at position 0
 	 */
-	for (i = 0; i < tmp_huftree_size; i++) {
+	for (i = 0; i < huftree_size; i++) {
 		r = pq->insert(&tmp_huftree[i], i);
 		CHECK_RESULT(r);
 	}
-	printf("after inserting original tmp_huftree array:\n");
-	r = pq->print();
+	//printf("after inserting original tmp_huftree array:\n");
+	//r = pq->print();
 	CHECK_RESULT(r);
 
-	r = pq->create_tmp_huf(&tmp_huftree, &tmp_huftree_size,
+	r = pq->gen_tmp_huf(&tmp_huftree, &huftree_size,
 		       	&tmp_huftree_mem);
 	CHECK_RESULT(r);
 
+	/*
 	printf("final temporary huffman tree:\n");
-	print_tmp_huftree(tmp_huftree, tmp_huftree_size);
+	print_tmp_huftree(tmp_huftree, huftree_size);
+	*/
 
-	gen_char_codes(tmp_huftree, tmp_huftree_size, char_codes);
-	print_char_codes(char_codes);
+	/* Generating the Huffman tree to be written to disk */
+	huftree = (struct huf_node *) malloc(
+			huftree_size * sizeof(struct huf_node));
+	if (huftree == NULL)
+		CHECK_RESULT(HUF_ERROR_MEMORY_ALLOC);
+	r = gen_huf(huftree, tmp_huftree, huftree_size);
+	CHECK_RESULT(r);
+	//print_huftree(huftree, huftree_size);
+	write_huf(out, total_chars, huftree_size, huftree);
+
+
+	gen_char_codes(tmp_huftree, huftree_size, char_codes);
+	//print_char_codes(char_codes);
 
 	r = compress(out, origtext, total_chars, char_codes);
 	CHECK_RESULT(r);
+
+	fclose(in);
+	fclose(out);
 
 	return EXIT_SUCCESS;
 }
@@ -162,14 +184,14 @@ enum huf_result get_input(FILE *in, struct tmp_huf_node **th,
 			i++;
 		}
 
-	print_tmp_huftree(*th, *mem);
+	//print_tmp_huftree(*th, *mem);
 
 	return HUF_SUCCESS;
 }
 
 /* Using Depth-first search on the tmp_huftree to generate the codes */
 void gen_char_codes(struct tmp_huf_node *tmp_huftree, 
-		uint16_t tmp_huftree_size, 
+		uint16_t huftree_size, 
 		char char_codes[ASCII_SIZE][CODE_SIZE])
 {
 	/* CODE_SIZE takes into account the null terminating character */
@@ -180,7 +202,7 @@ void gen_char_codes(struct tmp_huf_node *tmp_huftree,
 	int i;
 
 	/* Visiting the root */
-	tree_index = tmp_huftree_size - 1;
+	tree_index = huftree_size - 1;
 	stack_index = 0;
 	dfs_stack[stack_index] = tree_index;
 	tmp_huftree[tree_index].visited = IS_VISITED;
@@ -200,9 +222,9 @@ void gen_char_codes(struct tmp_huf_node *tmp_huftree,
 					current_character = tmp_huftree[tree_index].val;
 					for (i = 0; i < codes_index; i++) {
 						char_codes[current_character][i] = codes[i];
-						printf("%c", codes[i]);
+						//printf("%c", codes[i]);
 					}
-					printf("\n");
+					//printf("\n");
 					char_codes[current_character][i] = '\0';
 				}
 				codes_index--;
@@ -280,3 +302,36 @@ enum huf_result compress(FILE *out, char *text, uint32_t total,
 
 	return HUF_SUCCESS;
 }
+
+/* Generates the Huffman tree to be written to file */
+enum huf_result gen_huf(struct huf_node *huftree, 
+		struct tmp_huf_node *tmp_huftree, 
+		uint16_t huftree_size)
+{
+	int i;
+
+	if (huftree_size == 0)
+		return HUF_ERROR_INVALID_RESOURCE;
+
+	for (i = 0; i < huftree_size; i++) {
+		huftree[i].val = tmp_huftree[i].val;
+		huftree[i].left = tmp_huftree[i].left;
+		huftree[i].right = tmp_huftree[i].right;
+	}
+
+	return HUF_SUCCESS;
+}
+
+/* Writes the Huffman tree to file */
+void write_huf(FILE *out, uint32_t total_chars, uint16_t huftree_size,
+		struct huf_node *huftree)
+{
+	int i;
+
+	fwrite(&total_chars, sizeof(uint32_t), 1, out);
+	fwrite(&huftree_size, sizeof(uint16_t), 1, out);
+
+	for (i = 0; i < huftree_size; i++)
+		fwrite(&huftree[i], sizeof(struct huf_node), 1, out);
+}
+

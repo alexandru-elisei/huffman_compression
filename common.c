@@ -47,3 +47,20 @@ enum huf_result print_tmp_huftree(struct tmp_huf_node *th, uint16_t size)
 
 	return HUF_SUCCESS;
 }
+
+enum huf_result print_huftree(struct huf_node *th, uint16_t size)
+{
+	int i;
+
+	if (size == 0)
+		return HUF_ERROR_INVALID_RESOURCE;
+
+	printf("\n\t\thuftree:\n\n");
+	for (i = 0; i < size; i++)
+		printf("%d: [%c] \t- left = %3d, right = %3d\n", i,
+			       	th[i].val,
+				th[i].left, th[i].right);
+	printf("\n");
+
+	return HUF_SUCCESS;
+}

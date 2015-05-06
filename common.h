@@ -72,8 +72,10 @@ struct __attribute__((aligned)) tmp_huf_node {
 	int16_t right;
 };
 
+/* Prints the messages associated with the result codes */
 void huf_print_result(enum huf_result msg);
 
 enum huf_result print_tmp_huftree(struct tmp_huf_node *huf, uint16_t size);
+enum huf_result print_huftree(struct huf_node *huf, uint16_t size);
 
 #endif	/* #ifndef COMMON_H */

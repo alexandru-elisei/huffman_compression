@@ -10,7 +10,7 @@
 struct pqueue {
 	enum huf_result (*insert) (struct tmp_huf_node *c, uint16_t index);
 	enum huf_result (*print) ();
-	enum huf_result (*create_tmp_huf) (struct tmp_huf_node **tmp_huftree,
+	enum huf_result (*gen_tmp_huf) (struct tmp_huf_node **tmp_huftree,
 			uint16_t *tmp_huftree_size,
 			uint32_t *tmp_huftree_mem);
 };

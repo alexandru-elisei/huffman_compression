@@ -28,7 +28,7 @@ static enum huf_result sift_down(uint16_t root);
 static enum huf_result print();
 
 /* Creates the temporary Huffman tree in memory from the heap */
-static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
+static enum huf_result gen_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		uint16_t *tmp_huftree_size,
 		uint32_t *tmp_huftree_mem);
 
@@ -63,7 +63,7 @@ enum huf_result pqueue_init(struct pqueue **pq, uint16_t n)
 	*pq = (struct pqueue *) malloc(sizeof(struct pqueue));
 	(*pq)->insert = insert;
 	(*pq)->print = print;
-	(*pq)->create_tmp_huf = create_tmp_huf;
+	(*pq)->gen_tmp_huf = gen_tmp_huf;
 
 	h = (struct heap *) malloc(sizeof(struct heap));
 	if (h == NULL)
@@ -123,7 +123,7 @@ static enum huf_result insert(struct tmp_huf_node *c, uint16_t index)
 }
 
 /* Creates the temporary Huffman tree in memory from the heap */
-static enum huf_result create_tmp_huf (struct tmp_huf_node **tmp_huftree,
+static enum huf_result gen_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		uint16_t *tmp_huftree_size,
 		uint32_t *tmp_huftree_mem)
 {
