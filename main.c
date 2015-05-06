@@ -21,9 +21,11 @@ enum huf_result get_origtext(FILE *in, struct tmp_huf_node **th,
 		char **text, uint32_t *textmem);
 
 /* Read the compressed file */
-enum huf_result get_comptext(FILE *in, struct huf_node **huftree, 
+enum huf_result get_comptext(FILE *in, FILE *out,
+	       	struct huf_node **huftree, 
 		uint32_t *total_chars,
-		uint16_t *huftree_size);
+		uint16_t *huftree_size,
+		uint8_t **comptext);
 
 /* Generates the codes for the caracters */
 void gen_char_codes(struct huf_node *huftree, 
@@ -60,6 +62,7 @@ int main(int argc, char **argv)
 
 	char option;
 	char *origtext;			/* holds the non-compressed text */
+	uint8_t *comptext;
 	char char_codes[ASCII_SIZE][CODE_SIZE] = {{0}};
 	uint32_t origtext_mem;		/* allocated memory for the text */
 	uint32_t total_chars;		/* the total number of chars */
@@ -115,9 +118,9 @@ int main(int argc, char **argv)
 		CHECK_RESULT(r);
 
 		/*
-		   printf("final temporary huffman tree:\n");
-		   print_tmp_huftree(tmp_huftree, huftree_size);
-		   */
+		printf("final temporary huffman tree:\n");
+		print_tmp_huftree(tmp_huftree, huftree_size);
+		*/
 
 		/* Generating the Huffman tree to be written to disk */
 		huftree = (struct huf_node *) malloc(
@@ -130,16 +133,19 @@ int main(int argc, char **argv)
 		write_huf(out, total_chars, huftree_size, huftree);
 
 		gen_char_codes(huftree, huftree_size, char_codes);
-		print_char_codes(char_codes);
+		//print_char_codes(char_codes);
 
 		r = compress(out, origtext, total_chars, char_codes);
 		CHECK_RESULT(r);
 	} else {
-		r = get_comptext(in, &huftree, &total_chars, &huftree_size);
+		r = get_comptext(in, out, &huftree, &total_chars, 
+				&huftree_size, &comptext);
 		CHECK_RESULT(r);
 
+		/*
 		gen_char_codes(huftree, huftree_size, char_codes);
 		print_char_codes(char_codes);
+		*/
 	}
 
 	fclose(in);
@@ -275,7 +281,7 @@ enum huf_result compress(FILE *out, char *text, uint32_t total,
 		char char_codes[ASCII_SIZE][CODE_SIZE])
 {
 	int i, j;
-	uint8_t bits_calculated;
+	uint8_t bitcount;
 	uint8_t num_to_write;
 	uint16_t code_len;
 	char *current_code;
@@ -283,7 +289,7 @@ enum huf_result compress(FILE *out, char *text, uint32_t total,
 	if (text == NULL)
 		return HUF_ERROR_INVALID_PARAMETER;
 
-	bits_calculated = 0;
+	bitcount = 0;
 	num_to_write = 0;
 	for (i = 0; i < total; i++) {
 		current_code = char_codes[(uint8_t) text[i]];
@@ -293,12 +299,12 @@ enum huf_result compress(FILE *out, char *text, uint32_t total,
 		 * bits at a time
 		 * */
 		for (j = 0; j < code_len; j++) {
-			num_to_write = num_to_write * 2 + (current_code[j] - '0');
-			bits_calculated++;
-			if (bits_calculated == WRITE_SIZE) {
-				bits_calculated = 0;
+			num_to_write = (num_to_write << 1) + (current_code[j] - '0');
+			bitcount++;
+			if (bitcount == WRITE_SIZE) {
+				bitcount = 0;
+				fwrite(&num_to_write, sizeof(uint8_t), 1, out);
 				num_to_write = 0;
-				fwrite(&num_to_write, WRITE_SIZE, 1, out);
 			}
 		}
 	}
@@ -306,10 +312,10 @@ enum huf_result compress(FILE *out, char *text, uint32_t total,
 	 * If I haven't written a full set of 8 bits after I compressed the
 	 * message, I write zeros at the end until I get 8
 	 */
-	if (bits_calculated > 0) {
-		for (i = bits_calculated + 1; i <= WRITE_SIZE; i++)
-			num_to_write = num_to_write * 2;
-		fwrite(&num_to_write, WRITE_SIZE, 1, out);
+	if (bitcount > 0) {
+		for (i = bitcount + 1; i <= WRITE_SIZE; i++)
+			num_to_write = num_to_write << 1;
+		fwrite(&num_to_write, sizeof(uint8_t), 1, out);
 	}
 
 	return HUF_SUCCESS;
@@ -346,29 +352,40 @@ void write_huf(FILE *out, uint32_t total_chars, uint16_t huftree_size,
 	/* Writing Huffman tree root first */
 	fwrite(&(huftree[--huftree_size]), sizeof(struct huf_node), 1, out);
 
+	/*
 	printf("%d: char = %c, left = %d, right = %d\n", huftree_size,
 			huftree[huftree_size].val,
 			huftree[huftree_size].left, huftree[huftree_size].right);
+			*/
 
 	for (i = 0; i < huftree_size; i++) {
 		fwrite(&(huftree[i]), sizeof(struct huf_node), 1, out);
+		/*
 		printf("%d: char = %c, left = %d, right = %d\n", i, huftree[i].val,
 			huftree[i].left, huftree[i].right);
+			*/
 	}
 }
 
 /* Reads the compressed file */
-enum huf_result get_comptext(FILE *in, struct huf_node **huftree, 
+enum huf_result get_comptext(FILE *in, FILE *out,
+	       	struct huf_node **huftree, 
 		uint32_t *total_chars,
-		uint16_t *huftree_size)
+		uint16_t *huftree_size,
+		uint8_t **comptext)
 {
 	int i;
+	uint8_t code_block, mask;
+	int16_t bitcount;
+	uint32_t chars_decompressed;
 
 	fread(total_chars, sizeof(uint32_t), 1, in);
 	fread(huftree_size, sizeof(uint16_t), 1, in);
 
+	/*
 	printf("total_chars = %d\n", *total_chars);
 	printf("huftree_size = %d\n", *huftree_size);
+	*/
 
 	*huftree = (struct huf_node *) malloc(
 			*huftree_size * sizeof(struct huf_node));
@@ -377,8 +394,39 @@ enum huf_result get_comptext(FILE *in, struct huf_node **huftree,
 	/* Reading the rest of the Huffman tree */
 	for (i = 0; i < *huftree_size - 1; i++)
 		fread(&((*huftree)[i]), sizeof(struct huf_node), 1, in);
-	print_huftree(*huftree, *huftree_size);
+
+	//print_huftree(*huftree, *huftree_size);
+
+	i = *huftree_size - 1;
+	chars_decompressed = 0;
+	while (chars_decompressed < *total_chars) {
+		fread(&code_block, sizeof(uint8_t), 1, in);
+		for (bitcount = WRITE_SIZE - 1; bitcount >= 0; bitcount--) {
+			mask = 0;
+			mask = 1 << bitcount;
+
+			/* Daca am 0 pe pozitia bitcount merg la stanga */
+			if ((code_block & mask) == 0)
+				i = ((*huftree)[i].left);
+			else
+				i = ((*huftree)[i].right);
+
+			/* 
+			 * Daca sunt la un nod frunza, il printez si incep
+			 * calcularea drumului de la radacina
+			 */
+			if ((*huftree)[i].left == NO_CHILD && 
+					(*huftree)[i].right == NO_CHILD) {
+				fputc((*huftree)[i].val, out);
+				chars_decompressed++;
+
+				if (chars_decompressed == *total_chars)
+					break;
+
+				i = *huftree_size - 1;
+			}
+		}
+	}
 
 	return HUF_SUCCESS;
 }
-
