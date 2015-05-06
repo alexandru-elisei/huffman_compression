@@ -67,7 +67,6 @@ struct __attribute__((__packed__)) huf_node {
 struct __attribute__((aligned)) tmp_huf_node {
 	unsigned int freq;			/* number of apparitions */
 	unsigned char val;
-	uint8_t visited;
 	int16_t left;
 	int16_t right;
 };

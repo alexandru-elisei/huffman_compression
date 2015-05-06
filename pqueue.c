@@ -180,7 +180,6 @@ static struct tmp_huf_node *merge_into_one()
 	new->freq = left_child.freq + right_child.freq;
 	new->left = left_child.index;
 	new->right = right_child.index;
-	new->visited = NOT_VISITED;
 
 	return new;
 }
