@@ -150,11 +150,14 @@ static enum huf_result gen_tmp_huf (struct tmp_huf_node **tmp_huftree,
 		 * Inserting the new Huffman interior node at the end of the Huffman
 		 * tree array
 		 */
-		insert_pos = *tmp_huftree_size;
-		(*tmp_huftree)[insert_pos] = *new;
-		(*tmp_huftree_size)++;
-
-		insert(&((*tmp_huftree)[insert_pos]), insert_pos);
+		if (h->size == 0) {
+			(*tmp_huftree)[0] = *new;
+		} else {
+			insert_pos = *tmp_huftree_size;
+			(*tmp_huftree)[insert_pos] = *new;
+			(*tmp_huftree_size)++;
+			insert(&((*tmp_huftree)[insert_pos]), insert_pos);
+		}
 	}
 
 	return HUF_SUCCESS;
