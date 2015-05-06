@@ -331,13 +331,9 @@ enum huf_result gen_huf(struct huf_node *huftree,
 void write_huf(FILE *out, uint32_t total_chars, uint16_t huftree_size,
 		struct huf_node *huftree)
 {
-	int i;
-
 	fwrite(&total_chars, sizeof(uint32_t), 1, out);
 	fwrite(&huftree_size, sizeof(uint16_t), 1, out);
-
-	for (i = 0; i < huftree_size; i++)
-		fwrite(&(huftree[i]), sizeof(struct huf_node), 1, out);
+	fwrite(huftree, sizeof(struct huf_node), huftree_size, out);
 }
 
 /* Decompressing, it's so simple, there's no need for more than one function */
@@ -362,8 +358,7 @@ enum huf_result decompress(FILE *in, FILE *out)
 	/* Reading the Huffman tree */
 	huftree = (struct huf_node *) malloc(
 			huftree_size * sizeof(struct huf_node));
-	for (i = 0; i < huftree_size; i++)
-		fread(&(huftree[i]), sizeof(struct huf_node), 1, in);
+	fread(huftree, sizeof(struct huf_node), huftree_size, in);
 
 	i = 0;
 	chars_decompressed = 0;
